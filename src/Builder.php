@@ -68,9 +68,10 @@ class Builder extends HookableBuilder
      * @param  array $columns
      * @param  boolean $fulltext
      * @param  float $threshold
+     * @param  boolean $sortByRelevance
      * @return $this
      */
-    public function search($query, $columns = null, $fulltext = true, $threshold = null)
+    public function search($query, $columns = null, $fulltext = true, $threshold = null, $sortByRelevance = true)
     {
         if (is_bool($columns)) {
             list($fulltext, $columns) = [$columns, []];
@@ -83,7 +84,7 @@ class Builder extends HookableBuilder
         $columns = $parser->parseWeights($columns ?: $this->model->getSearchableColumns());
 
         if (count($words) && count($columns)) {
-            $this->query->from($this->buildSubquery($words, $columns, $threshold));
+            $this->query->from($this->buildSubquery($words, $columns, $threshold, $sortByRelevance));
         }
 
         return $this;
@@ -95,9 +96,10 @@ class Builder extends HookableBuilder
      * @param  array $words
      * @param  array $mappings
      * @param  float $threshold
+     * @param  boolean $sortByRelevance
      * @return \Sofa\Eloquence\Searchable\Subquery
      */
-    protected function buildSubquery(array $words, array $mappings, $threshold)
+    protected function buildSubquery(array $words, array $mappings, $threshold, $sortByRelevance)
     {
         $subquery = new SearchableSubquery($this->query->newQuery(), $this->model->getTable());
 
@@ -111,7 +113,7 @@ class Builder extends HookableBuilder
                  ->from($this->model->getTable())
                  ->groupBy($this->model->getQualifiedKeyName());
 
-        $this->addSearchClauses($subquery, $columns, $words, $threshold);
+        $this->addSearchClauses($subquery, $columns, $words, $threshold, $sortByRelevance);
 
         return $subquery;
     }
@@ -123,6 +125,7 @@ class Builder extends HookableBuilder
      * @param  \Sofa\Eloquence\Searchable\ColumnCollection $columns
      * @param  array $words
      * @param  float $threshold
+     * @param  boolean $sortByRelevance
      * @return void
      */
     protected function addSearchClauses(
@@ -131,7 +134,7 @@ class Builder extends HookableBuilder
         array $words,
         $threshold
     ) {
-        $whereBindings = $this->searchSelect($subquery, $columns, $words, $threshold);
+        $whereBindings = $this->searchSelect($subquery, $columns, $words, $threshold, $sortByRelevance);
 
         // For morphOne/morphMany support we need to port the bindings from JoinClauses.
         $joinBindings = array_flatten(array_pluck((array)$subquery->getQuery()->joins, 'bindings'));
@@ -147,10 +150,12 @@ class Builder extends HookableBuilder
 
         $this->query->where('relevance', '>=', new Expression($threshold));
 
-        // $this->query->orders = array_merge(
-        //     [['column' => 'relevance', 'direction' => 'desc']],
-        //     (array) $this->query->orders
-        // );
+        if ($sortByRelevance) {
+            $this->query->orders = array_merge(
+                [['column' => 'relevance', 'direction' => 'desc']],
+                (array) $this->query->orders
+            );
+        }
     }
 
     /**
