@@ -135,7 +135,7 @@ class Builder extends HookableBuilder
         $threshold,
         $sortByRelevance
     ) {
-        $whereBindings = $this->searchSelect($subquery, $columns, $words, $threshold, $sortByRelevance);
+        $whereBindings = $this->searchSelect($subquery, $columns, $words, $threshold);
 
         // For morphOne/morphMany support we need to port the bindings from JoinClauses.
         $joinBindings = array_flatten(array_pluck((array)$subquery->getQuery()->joins, 'bindings'));
