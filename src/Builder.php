@@ -132,7 +132,8 @@ class Builder extends HookableBuilder
         SearchableSubquery $subquery,
         ColumnCollection $columns,
         array $words,
-        $threshold
+        $threshold,
+        $sortByRelevance
     ) {
         $whereBindings = $this->searchSelect($subquery, $columns, $words, $threshold, $sortByRelevance);
 
